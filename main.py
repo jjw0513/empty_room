@@ -6,7 +6,7 @@ import math
 import random
 import numpy as np
 import time
-
+import wandb
 import gym
 
 from memory import ReplayMemory
@@ -105,6 +105,7 @@ def train(env, n_episodes, render = False) :
         obs = env.reset(seed=123)
         state = get_state(obs)
         total_reward = 0.0
+
         for i in count() :
             action = select_action(state)
             observation, reward, done, truncated, info = env.step(action)
@@ -115,6 +116,7 @@ def train(env, n_episodes, render = False) :
             total_reward += reward
 
             print(f"step={i}, action={action[0].item()}, reward={reward}")
+            print("episodes :", episodes)
             if not done :
                 next_state = get_state(obs)
             else :
@@ -133,25 +135,35 @@ def train(env, n_episodes, render = False) :
                 if steps_done % TARGET_UPDATE == 0:  # 1000-step마다 target_net 업데이트
                     target_net.load_state_dict(policy_net.state_dict())
 
-
             if done:
-        	    #env.reset(seed=123) #환경이 랜덤하게 생성?
-        	    break
-        if episodes % 10 == 0:
-            print('Total steps: {} \t Episode: {}/{} \t Total reward: {}'.format(steps_done, episodes, i, total_reward))
+                #wandb.log({"episode_reward": total_reward})  # Wandb에 에피소드 보상을 보고
+                print("total_reward",total_reward)
+                break
+        #if episodes % 10 == 0:
+        #    print('Total steps: {} \t Episode: {}/{} \t Total reward: {}'.format(steps_done, episodes, i, total_reward))
             # episode : x/y는 episode x당 y번의 action을 취한 것이라 볼 수 있다(해당 에피소드에서 수행된 step의 총수 : t).
 
 def test(env, n_episodes, policy, render=True):
     for episode in range(n_episodes):
-        obs = env.reset()
+        obs = env.reset(seed=123)
         state = get_state(obs)
         total_reward = 0.0
-        for t in count():
+
+
+        for i in count():
             action = policy(state.to('cpu')).max(1)[1].view(1,1)
-
-            obs, reward, done, info = env.step(action)
-
+            #observation, reward, done, truncated, info = env.step(action)
+            observation, reward, done, truncated, info = env.step(action)
+            #obs, reward, terminated, truncated, info
             total_reward += reward
+            print("action:", action[0].item())  # 어떤 행동을 하는지
+            print("obs:", observation)  # 관측한 observation 프린트
+            print("env.instr.s_done:", env.instrs.s_done)
+            # obs, reward, done, info = env.step(action)
+            total_reward += reward
+            print("testing..")
+            print(f"step={i}, action={action[0].item()}, reward={reward}")
+            #print("episodes : ", episodes)
 
             if not done:
                 next_state = get_state(obs)
@@ -176,10 +188,10 @@ GAMMA = 0.99
 EPS_START = 1
 EPS_END = 0.02
 EPS_DECAY = 1000000
-TARGET_UPDATE = 1000
+TARGET_UPDATE = 800 #1000
 RENDER = False
 lr = 1e-4
-INITIAL_MEMORY = 10000
+INITIAL_MEMORY = 50   #10000  #sh edited previous 500
 MEMORY_SIZE = 10 * INITIAL_MEMORY
 
 # create networks
@@ -198,8 +210,13 @@ env.reset(seed=123)
 
 memory = ReplayMemory(MEMORY_SIZE)
 
-train(env, 20)
-test(env, n_episodes=1)
+train(env, 1)
+
+torch.save(policy_net, "dqn_redball")
+policy_net = torch.load("dqn_redball")
+print("Start Testing..")
+test(env, 1, policy_net, render=False)
+
 #for i in range(1000):
 	#action = env.action_space.sample()
 	#observation, reward, done, truncated, info = env.step(action)

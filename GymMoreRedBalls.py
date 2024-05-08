@@ -28,7 +28,7 @@ class SeqInOrderInstr(Instr, ABC):
             assert isinstance(instr, ActionInstr) or isinstance(instr, AndInstr)
         self.instr_s = instr_s
         self.strict = strict
-
+        self.reward = 0
 class InOrderInstr(SeqInOrderInstr):
     """
     Sequence two instructions in order:
@@ -53,6 +53,7 @@ class InOrderInstr(SeqInOrderInstr):
 
     def verify(self, action, i=0):
         # if all instructions are sequentially done, return "success". if not, "failure"
+
         if self.s_done[i] == "success":
             if i == len(self.instr_s) - 1:
                 return "success"
@@ -61,11 +62,15 @@ class InOrderInstr(SeqInOrderInstr):
         else:
             self.s_done[i] = self.instr_s[i].verify(action)
             if self.s_done[i] == "failure":
-                self.env.reset(seed=123)
+
                 return "failure"
 
             if self.s_done[i] == "success":
-                #return self.verify(action)
+                #self.verify(action)
+
+                #self.reward += 2
+                #print("mid_success")
+                #print(self.reward)
                 return self.verify(action)
         return "continue"
 
@@ -157,12 +162,12 @@ class GymMoreRedBalls(RoomGridLevel):
         instr_green = GoToInstr(ObjDesc(self.objs[1].type, self.objs[1].color))
         instr_blue = GoToInstr(ObjDesc(self.objs[2].type, self.objs[2].color))
         #빨,초,파 순서
-       # instr_ = InOrderInstr([instr_red, instr_green, instr_blue])
-
+       #instr_ = InOrderInstr([instr_red, instr_green, instr_blue])
+        instr_ = InOrderInstr([instr_red, instr_blue, instr_green])
         instr_list = [instr_red,instr_green,instr_blue]
         #random.shuffle(instr_list)  # 무작위로 지시사항을 섞음
 
-        instr_ = InOrderInstr(instr_list)
+        #instr_ = InOrderInstr(instr_list)
         return instr_
     def validate_instrs(self, instr):
         """
@@ -253,7 +258,8 @@ class GymMoreRedBalls(RoomGridLevel):
 
     def step(self, action):
         obs_all, reward, terminated, truncated, info = super().step(action)
-
+        count = 0
+        count +=1
         obs = obs_all['image'][:,:,0]
 
         # If we drop an object, we need to update its position in the environment
@@ -261,11 +267,16 @@ class GymMoreRedBalls(RoomGridLevel):
             self.update_objs_poss()
 
         # If we've successfully completed the mission
+        #status,temp_reward = self.instrs.verify(action)
+        #print(temp_reward, reward)
+        #reward += temp_reward
+        #print(status)
         status = self.instrs.verify(action)
-
         if status == "success":
             terminated = True
             reward = self._reward()
+
+
         elif status == "failure":
             terminated = True
             reward = 0
@@ -317,7 +328,7 @@ if __name__ == "__main__":
 
     seed = 123
     print(env.mission)
-    for i in range(25):
+    for i in range(len(Oracle_action)):
 
         action = Oracle_action[i]
             #action = Wrong_action[i]
