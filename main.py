@@ -19,11 +19,13 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 Transition = namedtuple('Transion',
                         ('state', 'action', 'next_state', 'reward'))
+#wandb.init(project="DQN_redball_3try", entity="jjw0513")
 
-
+#wandb.init.entity(hails)
 def select_action(state) :
     global steps_done
     sample = random.random()
+    #eps_threshold = EPS_START
     eps_threshold = EPS_END + (EPS_START - EPS_END) * \
                     math.exp(-1. * steps_done / EPS_DECAY)
     steps_done += 1  # action을 선택할 때마다 step에 +1처리
@@ -78,6 +80,7 @@ def optimize_model():
         param.grad.data.clamp_(-1, 1)  # 그라디언트 클래핑을 이용해 발산 방지
     optimizer.step()
 
+#   wandb.log({"loss": loss.item(), "Q_value": state_action_values.mean().item()})
 def get_state(obs): #obs는 (높이, 너비, 채널) 형태 => (채널, 높이, 너비) 형태가 되도록
     # 이미지 데이터 추출
     image_data = obs[0]
@@ -136,14 +139,15 @@ def train(env, n_episodes, render = False) :
                     target_net.load_state_dict(policy_net.state_dict())
 
             if done:
-                #wandb.log({"episode_reward": total_reward})  # Wandb에 에피소드 보상을 보고
+                #wandb.log({"episode_reward": total_reward,"episode": episodes})  # Wandb에 에피소드 보상을 보고
                 print("total_reward",total_reward)
                 break
         #if episodes % 10 == 0:
         #    print('Total steps: {} \t Episode: {}/{} \t Total reward: {}'.format(steps_done, episodes, i, total_reward))
             # episode : x/y는 episode x당 y번의 action을 취한 것이라 볼 수 있다(해당 에피소드에서 수행된 step의 총수 : t).
-
-def test(env, n_episodes, policy, render=True):
+    env.close()
+    return
+def test(env, n_episodes, policy, render=False):
     for episode in range(n_episodes):
         obs = env.reset(seed=123)
         state = get_state(obs)
@@ -173,6 +177,7 @@ def test(env, n_episodes, policy, render=True):
             state = next_state
 
             if done:
+                #wandb.log({"Test_episode_reward": total_reward,"episode": episode})
                 print("Finished Episode {} with reward {}".format(episode, total_reward))
                 break
 
@@ -183,16 +188,16 @@ def test(env, n_episodes, policy, render=True):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu" )
 
 # hyperparameters
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 GAMMA = 0.99
 EPS_START = 1
-EPS_END = 0.02
+EPS_END = 0.2 #0.02
 EPS_DECAY = 1000000
 TARGET_UPDATE = 800 #1000
 RENDER = False
-lr = 1e-4
-INITIAL_MEMORY = 50   #10000  #sh edited previous 500
-MEMORY_SIZE = 10 * INITIAL_MEMORY
+lr = 1e-3   #1e-4
+INITIAL_MEMORY = 500   #10000  #sh edited previous 500
+MEMORY_SIZE = 1000 * INITIAL_MEMORY
 
 # create networks
 policy_net = DQN(n_actions=3).to('cpu')
@@ -205,17 +210,19 @@ optimizer = optim.Adam(policy_net.parameters(), lr=lr)
 steps_done = 0
 #create env
 # env = GymMoreRedBalls(room_size=10, render_mode='human')
-env = GymMoreRedBalls(room_size=10, render_mode='human') # render_mode 를 human 으로 한 위와 같이하면 실제로 창에 어떻게 행동하는지가 디스플레이됨.
+env = GymMoreRedBalls(room_size=10, render_mode='rgb') # render_mode 를 human 으로 한 위와 같이하면 실제로 창에 어떻게 행동하는지가 디스플레이됨.
 env.reset(seed=123)
 
 memory = ReplayMemory(MEMORY_SIZE)
 
 train(env, 1)
 
+
+
 torch.save(policy_net, "dqn_redball")
 policy_net = torch.load("dqn_redball")
 print("Start Testing..")
-test(env, 1, policy_net, render=False)
+test(env, 1, policy_net)
 
 #for i in range(1000):
 	#action = env.action_space.sample()

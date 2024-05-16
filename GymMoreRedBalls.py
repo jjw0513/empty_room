@@ -66,12 +66,13 @@ class InOrderInstr(SeqInOrderInstr):
                 return "failure"
 
             if self.s_done[i] == "success":
-                #self.verify(action)
 
-                #self.reward += 2
+                #self.reward += 0.3
                 #print("mid_success")
                 #print(self.reward)
                 return self.verify(action)
+
+
         return "continue"
 
         # if self.a_done == "success":
@@ -162,8 +163,8 @@ class GymMoreRedBalls(RoomGridLevel):
         instr_green = GoToInstr(ObjDesc(self.objs[1].type, self.objs[1].color))
         instr_blue = GoToInstr(ObjDesc(self.objs[2].type, self.objs[2].color))
         #빨,초,파 순서
-       #instr_ = InOrderInstr([instr_red, instr_green, instr_blue])
-        instr_ = InOrderInstr([instr_red, instr_blue, instr_green])
+        instr_ = InOrderInstr([instr_red, instr_green, instr_blue])
+        #instr_ = InOrderInstr([instr_red, instr_blue, instr_green])
         instr_list = [instr_red,instr_green,instr_blue]
         #random.shuffle(instr_list)  # 무작위로 지시사항을 섞음
 
@@ -275,7 +276,6 @@ class GymMoreRedBalls(RoomGridLevel):
         if status == "success":
             terminated = True
             reward = self._reward()
-
 
         elif status == "failure":
             terminated = True
